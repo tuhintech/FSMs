@@ -168,7 +168,7 @@ always@(*) begin
             end
         end
         
-        //STATE - 6
+        //STATE - 5
         s4: begin
             if(x == 3'b111) begin
                 Q <= 3'b000;
