@@ -1,0 +1,216 @@
+`timescale 1ns / 1ps
+
+//2x1 MUX
+module MUX(S, I0, I1, F);
+input S;
+input [1:0]I0, I1;
+output reg [1:0]F;
+always@* begin
+if(S) 
+    F <= I1;
+
+else 
+    F <= I0;
+end
+endmodule
+
+//T-FlipFlop DESIGN
+module TFF(clk, q, rst_sig);
+input clk, rst_sig;
+output reg q;
+always@(posedge clk or posedge rst_sig) begin
+if(rst_sig) begin
+    q <= 0;
+end
+else
+    q <= ~q;
+end
+endmodule
+
+//D-FlipFlop posedge Design
+module DFF_p(clk, rst, rst_sig, q);
+input clk, rst, rst_sig;
+output reg q;
+always@(posedge clk or posedge rst or posedge rst_sig) begin
+if(rst||rst_sig == 1) 
+    q <= 0;  
+else 
+    q <= 1;  
+end
+endmodule
+
+//D-FlipFlop negedge Design
+module DFF_n(clk, rst, rst_sig, q);
+input clk, rst, rst_sig;
+output reg q;
+always@(negedge clk or posedge rst or posedge rst_sig) begin
+if(rst||rst_sig == 1) 
+    q <= 0;  
+else 
+    q <= 1;  
+end
+endmodule
+
+// STATE MACHINE
+module STATE_MACHINE(x, rst_sig, Q, rst);
+//I/O Ports define
+input [2:0]x;
+input rst_sig;
+output reg [2:0]Q;
+output reg rst;
+
+
+//States define
+parameter idle = 0;
+parameter s0 = 1;
+parameter s1 = 2;
+parameter s2 = 3;
+parameter s3 = 4;
+parameter s4 = 5;
+parameter s5 = 6;
+parameter s6 = 7;
+
+//STATE NEXT STATE VARIABLE DEFINE
+reg [2:0] state = idle, nxtstate = idle;
+
+
+//RESET LOGIC + NEXT STATE LOGIC + OUTPUT LOGIC
+always@(*) begin
+
+    //RESET LOGIC
+    if(rst_sig) begin
+        Q <= 3'b000;
+        state <= idle;
+        nxtstate <= idle; 
+    end
+    
+    //STATE INTERCONNECTION
+    else begin
+        state <= nxtstate;
+        case(state)
+        //IDLE STATE 
+        idle: begin
+            if(x == 3'b001) begin 
+                Q <= 3'b001;
+                rst <= 0;
+                nxtstate <= s0;
+            end
+            else if(x == 3'b010)begin
+                Q <= 3'b010;
+                rst <= 0;
+                nxtstate <= s1;
+            end
+            else begin
+                Q <= 3'b000;
+                rst <= 0;
+                nxtstate <= idle;
+            end
+        end
+    
+        //STATE - 1
+        s0: begin
+            if(x == 3'b011) begin
+                Q <= 3'b100;
+                rst <= 1;
+                nxtstate <= s2;
+            end
+            else begin
+                Q <= 3'b001;
+                rst <= 0;
+                nxtstate <= s0;
+            end
+        end
+    
+        //STATE - 2
+        s1: begin
+            if(x == 3'b011) begin
+                Q <= 3'b100;
+                rst <= 1;
+                nxtstate <= s2;
+            end
+            else begin
+                Q <= 3'b010;
+                rst <= 0;
+                nxtstate <= s1;
+            end
+        end
+        
+        //STATE - 3
+        s2: begin
+            if(x == 3'b101) begin
+                Q <= 3'b101;
+                rst <= 0;
+                nxtstate <= s3;
+            end
+            else if(x == 3'b110) begin
+                Q <= 3'b110;
+                rst <= 0;
+                nxtstate <= s4;
+            end
+            else begin
+                Q <= 3'b100;
+                rst <= 0;
+                nxtstate  = s2;
+            end
+        end
+        
+        //STATE - 4
+        s3: begin
+            if(x == 3'b111) begin
+                Q <= 3'b000;
+                rst <= 1;
+                nxtstate <= idle;
+            end
+            else begin
+                Q <= 3'b101;
+                rst <= 0;
+                nxtstate <= s3;
+            end
+        end
+        
+        //STATE - 6
+        s4: begin
+            if(x == 3'b111) begin
+                Q <= 3'b000;
+                rst <= 1;
+                nxtstate <= idle;
+            end
+            else begin
+                Q <= 3'b110;
+                rst <= 0;
+                nxtstate <= s4;
+            end
+        end
+        
+        //UNUSED STATES
+        s5 : begin
+            nxtstate <= idle;
+        end
+        
+        s6 : begin
+            nxtstate <= idle;
+        end
+        
+        endcase
+        end
+end
+endmodule
+
+module dual_edge_locking(fext, f, rst_sig, OUT);
+
+input fext, f, rst_sig;
+output [2:0]OUT;
+wire [2:0]x;
+wire rst;
+wire [1:0]q1, q2;
+
+MUX m1(x[2], q1, q2, x[1:0]);
+DFF_p d1(fext, rst, rst_sig, q1[0]);
+DFF_p d2(f, rst, rst_sig, q1[1]);
+DFF_n d3(fext, rst, rst_sig, q2[0]);
+DFF_n d4(f, rst, rst_sig, q2[1]);
+TFF t1(rst, x[2], rst_sig);
+STATE_MACHINE s1(x, rst_sig, OUT, rst);
+
+
+endmodule
